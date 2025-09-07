@@ -24,16 +24,9 @@ var (
 	DelCommand CommandType = "DEL"
 )
 
-func IsValidCommand(q string) bool {
-	switch q {
-	case string(SetCommand), string(GetCommand), string(DelCommand):
-		return true
-	default:
-		return false
+func NewQuery(c CommandType, args []string) *Query {
+	return &Query{
+		CommandType: c,
+		Arguments:   args,
 	}
-}
-
-func IsValidArguments(args []string) bool {
-	// todo: implement args validation
-	return true
 }

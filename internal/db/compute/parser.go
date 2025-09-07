@@ -14,34 +14,28 @@ var (
 )
 
 type Parser interface {
-	Parse(data string) (Query, error)
+	Parse(data string) (*Query, error)
 }
 
 type QueryParser struct {
 	logger *zap.Logger
 }
 
-func (q *QueryParser) Parse(data string) (Query, error) {
-	var result Query
-
+func (q *QueryParser) Parse(data string) (*Query, error) {
 	trimmed := strings.TrimSpace(data)
 	command, err := parseCommandType(trimmed)
 
 	if err != nil {
-		return Query{}, err
+		return nil, err
 	}
-
-	result.CommandType = command
 
 	args, err := parseArguments(trimmed)
 
 	if err != nil {
-		return Query{}, err
+		return nil, err
 	}
 
-	result.Arguments = args
-
-	return result, nil
+	return NewQuery(command, args), nil
 }
 
 func parseCommandType(q string) (CommandType, error) {
@@ -68,12 +62,6 @@ func parseArguments(q string) ([]string, error) {
 		if len(rawArgs) != 2 {
 			return nil, ErrWrongNOfArgs
 		}
-	}
-
-	isValid := IsValidArguments(rawArgs)
-
-	if !isValid {
-		return nil, ErrInvalidArgs
 	}
 
 	return rawArgs, nil

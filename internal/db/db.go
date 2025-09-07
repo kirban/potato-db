@@ -21,7 +21,7 @@ type DbExecutable interface {
 }
 
 type computeModule interface {
-	Parse(q string) (compute.Query, error)
+	Compute(q string) (compute.Query, error)
 }
 
 type storageModule interface {
@@ -57,7 +57,7 @@ func New(computeModule computeModule, storageModule storageModule, logger *zap.L
 }
 
 func (db *Database) ExecuteQuery(q string) string {
-	query, err := db.computeModule.Parse(q)
+	query, err := db.computeModule.Compute(q)
 
 	if err != nil {
 		return fmt.Sprintf("%s %s", compute.QueryErrorResult, err.Error())
@@ -80,7 +80,7 @@ func (db *Database) ExecuteQuery(q string) string {
 			return fmt.Sprint(compute.QueryErrorResult, err.Error())
 		}
 		return fmt.Sprint(compute.QueryOkResult)
-	default:
-		return fmt.Sprintf("%s %s", compute.QueryErrorResult, ErrUnknownCommandInQuery)
 	}
+
+	return fmt.Sprintf("%s", compute.QueryErrorResult)
 }

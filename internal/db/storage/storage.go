@@ -17,6 +17,7 @@ type Storage struct {
 }
 
 func (s *Storage) Get(key string) (string, error) {
+	s.logger.Debug("get", zap.String("key", key))
 	val, err := s.engine.Get(key)
 
 	if err != nil {
@@ -27,6 +28,8 @@ func (s *Storage) Get(key string) (string, error) {
 }
 
 func (s *Storage) Set(key string, value string) error {
+	s.logger.Debug("setting key", zap.String("key", key), zap.String("value", value))
+
 	err := s.engine.Set(key, value)
 
 	if err != nil {
@@ -37,6 +40,7 @@ func (s *Storage) Set(key string, value string) error {
 }
 
 func (s *Storage) Del(key string) error {
+	s.logger.Debug("deleting key", zap.String("key", key))
 	err := s.engine.Delete(key)
 
 	if err != nil {

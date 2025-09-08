@@ -10,6 +10,7 @@ import (
 var (
 	ErrUnknownCommand = errors.New("parse error: unknown command")
 	ErrWrongNOfArgs   = errors.New("parse error: invalid number of arguments")
+	ErrInvalidQuery   = errors.New("parse error: invalid query")
 )
 
 type Parser interface {
@@ -22,6 +23,11 @@ type QueryParser struct {
 
 func (q *QueryParser) Parse(data string) (*Query, error) {
 	trimmed := strings.TrimSpace(data)
+
+	if len(trimmed) == 0 {
+		return nil, ErrInvalidQuery
+	}
+
 	command, err := parseCommandType(trimmed)
 
 	if err != nil {

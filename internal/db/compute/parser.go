@@ -10,7 +10,6 @@ import (
 var (
 	ErrUnknownCommand = errors.New("parse error: unknown command")
 	ErrWrongNOfArgs   = errors.New("parse error: invalid number of arguments")
-	ErrInvalidArgs    = errors.New("parse error: invalid args passed")
 )
 
 type Parser interface {
@@ -67,7 +66,7 @@ func parseArguments(q string) ([]string, error) {
 	return rawArgs, nil
 }
 
-func NewQueryParser(logger *zap.Logger) Parser {
+func NewQueryParser(logger *zap.Logger) *QueryParser {
 	return &QueryParser{
 		logger: logger,
 	}

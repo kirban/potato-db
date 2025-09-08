@@ -12,16 +12,14 @@ var (
 	ErrLoggerNotInitialized        = errors.New("logger is not initialized")
 	ErrComputeModuleNotInitialized = errors.New("compute module is not initialized")
 	ErrStorageModuleNotInitialized = errors.New("storage module is not initialized")
-	ErrParseFailed                 = errors.New("failed to parse command")
-	ErrUnknownCommandInQuery       = errors.New("unknown command")
 )
 
-type DbExecutable interface {
+type Executable interface {
 	ExecuteQuery(q string) (any, error)
 }
 
 type computeModule interface {
-	Compute(q string) (compute.Query, error)
+	Compute(q string) (*compute.Query, error)
 }
 
 type storageModule interface {
@@ -36,7 +34,7 @@ type Database struct {
 	storageModule storageModule
 }
 
-func New(computeModule computeModule, storageModule storageModule, logger *zap.Logger) (*Database, error) {
+func NewDatabase(computeModule computeModule, storageModule storageModule, logger *zap.Logger) (*Database, error) {
 	if logger == nil {
 		return nil, ErrLoggerNotInitialized
 	}

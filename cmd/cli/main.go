@@ -53,7 +53,11 @@ func main() {
 }
 
 func initStorage(logger *zap.Logger) (*storage.Storage, error) {
-	engine := inmemory.NewInMemoryEngine()
+	engine, err := inmemory.NewInMemoryEngine(logger)
+
+	if err != nil {
+		return nil, err
+	}
 
 	st, err := storage.NewStorage(engine, logger)
 

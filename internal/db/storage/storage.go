@@ -5,8 +5,12 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	ErrKeyNotFound = errors.New("key not found")
+)
+
 type Engine interface {
-	Get(key string) (string, error)
+	Get(key string) (string, bool)
 	Set(key string, value string) error
 	Delete(key string) error
 }
@@ -18,10 +22,10 @@ type Storage struct {
 
 func (s *Storage) Get(key string) (string, error) {
 	s.logger.Debug("get", zap.String("key", key))
-	val, err := s.engine.Get(key)
+	val, exists := s.engine.Get(key)
 
-	if err != nil {
-		return "", err
+	if !exists {
+		return "", ErrKeyNotFound
 	}
 
 	return val, nil

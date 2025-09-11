@@ -1,23 +1,23 @@
 package inmemory
 
-import "errors"
+import (
+	"errors"
+	"go.uber.org/zap"
+)
 
 var (
-	ErrKeyNotFound = errors.New("key not found")
+	ErrInvalidLogger = errors.New("invalid logger")
 )
 
 type Engine struct {
+	logger      *zap.Logger
 	dataStorage *HashTable
 }
 
-func (e *Engine) Get(key string) (string, error) {
+func (e *Engine) Get(key string) (string, bool) {
 	val, exists := e.dataStorage.Get(key)
 
-	if !exists {
-		return "", ErrKeyNotFound
-	}
-
-	return val, nil
+	return val, exists
 }
 
 func (e *Engine) Set(key string, value string) error {
@@ -30,8 +30,13 @@ func (e *Engine) Delete(key string) error {
 	return nil
 }
 
-func NewInMemoryEngine() *Engine {
-	return &Engine{
-		dataStorage: NewHashTable(),
+func NewInMemoryEngine(logger *zap.Logger) (*Engine, error) {
+	if logger == nil {
+		return nil, ErrInvalidLogger
 	}
+
+	return &Engine{
+		logger:      logger,
+		dataStorage: NewHashTable(),
+	}, nil
 }

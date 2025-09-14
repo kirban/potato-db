@@ -13,11 +13,7 @@ type HashTable struct {
 func (h *HashTable) Get(k string) (string, bool) {
 	value, exists := h.data[k]
 
-	if !exists {
-		return "", false
-	}
-
-	return value, true
+	return value, exists
 }
 
 func (h *HashTable) Set(k, v string) {

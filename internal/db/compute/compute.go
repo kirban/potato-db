@@ -1,12 +1,17 @@
 package compute
 
+import "fmt"
+
 type Compute struct {
-	parser *QueryParser
+	parser *Parser
 }
 
 func (c *Compute) Compute(q string) (*Query, error) {
-	query, err := c.parser.Parse(q)
+	if c.parser == nil {
+		return nil, fmt.Errorf("parser is not initialized")
+	}
 
+	query, err := (*c.parser).Parse(q)
 	if err != nil {
 		return nil, err
 	}
@@ -14,7 +19,7 @@ func (c *Compute) Compute(q string) (*Query, error) {
 	return query, nil
 }
 
-func NewCompute(parser *QueryParser) *Compute {
+func NewCompute(parser *Parser) *Compute {
 	return &Compute{
 		parser: parser,
 	}

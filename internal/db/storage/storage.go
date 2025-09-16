@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"go.uber.org/zap"
 )
 
 var (
@@ -16,13 +15,11 @@ type Engine interface {
 }
 
 type Storage struct {
-	engine Engine
-	logger zap.Logger
+	engine *Engine
 }
 
 func (s *Storage) Get(key string) (string, error) {
-	s.logger.Debug("get", zap.String("key", key))
-	val, exists := s.engine.Get(key)
+	val, exists := (*s.engine).Get(key)
 
 	if !exists {
 		return "", ErrKeyNotFound
@@ -32,9 +29,7 @@ func (s *Storage) Get(key string) (string, error) {
 }
 
 func (s *Storage) Set(key string, value string) error {
-	s.logger.Debug("setting key", zap.String("key", key), zap.String("value", value))
-
-	err := s.engine.Set(key, value)
+	err := (*s.engine).Set(key, value)
 
 	if err != nil {
 		return err
@@ -44,8 +39,7 @@ func (s *Storage) Set(key string, value string) error {
 }
 
 func (s *Storage) Del(key string) error {
-	s.logger.Debug("deleting key", zap.String("key", key))
-	err := s.engine.Delete(key)
+	err := (*s.engine).Delete(key)
 
 	if err != nil {
 		return err
@@ -54,17 +48,12 @@ func (s *Storage) Del(key string) error {
 	return nil
 }
 
-func NewStorage(engine Engine, logger *zap.Logger) (*Storage, error) {
-	if logger == nil {
-		return nil, errors.New("logger is required")
-	}
-
+func NewStorage(engine *Engine) (*Storage, error) {
 	if engine == nil {
 		return nil, errors.New("engine is required")
 	}
 
 	return &Storage{
 		engine: engine,
-		logger: *logger,
 	}, nil
 }

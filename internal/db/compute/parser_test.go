@@ -2,7 +2,6 @@ package compute
 
 import (
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"reflect"
 	"testing"
 )
@@ -67,7 +66,7 @@ func TestParse(t *testing.T) {
 		},
 	}
 
-	p := NewQueryParser(zap.NewNop())
+	p := NewQueryParser()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

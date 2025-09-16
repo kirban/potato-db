@@ -16,14 +16,14 @@ var (
 )
 
 type Configurable[T any] interface {
-	ParseYaml(path string) (*T, error)
-	ValidateConfig() error
+	parseYaml(path string) (*T, error)
+	validateConfig() error
 }
 
 type Config struct {
-	app       *AppConfigOptions    `yaml:"app"`
-	tcpServer *ServerConfigOptions `yaml:"tcp_server"`
-	db        *DbConfigOptions     `yaml:"db"`
+	App       *AppConfigOptions    `yaml:"app"`
+	TcpServer *ServerConfigOptions `yaml:"tcp_server"`
+	Db        *DbConfigOptions     `yaml:"db"`
 }
 
 type AppConfigOptions struct {
@@ -54,7 +54,60 @@ var AppConfigDefaults = &AppConfigOptions{
 	LogOutput: "stdout",
 }
 
-func (c *Config) ParseYaml(configPath string) (*Config, error) {
+func (c *Config) parseYaml(rawData []byte, config *Config) (*Config, error) {
+	if err := yaml.Unmarshal(rawData, &config); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+func (c *Config) validateConfig() error {
+	if c.App == nil {
+		return errors.New("App is required")
+	} else {
+		if c.App.LogLevel == "" {
+			c.App.LogLevel = AppConfigDefaults.LogLevel
+		} else if !slices.Contains(ValidLogLevels, c.App.LogLevel) {
+			return errors.New("invalid log level")
+		}
+
+		if c.App.LogOutput == "" {
+			c.App.LogOutput = AppConfigDefaults.LogOutput
+		} else if !slices.Contains(ValidLogOutputs, c.App.LogOutput) {
+			return errors.New("invalid log output")
+		}
+	}
+
+	if c.TcpServer == nil {
+		return errors.New("tcp_server is required")
+	} else {
+		if c.TcpServer.Host == "" {
+			c.TcpServer.Host = ServerConfigDefaults.Host
+		}
+
+		if c.TcpServer.Port == 0 {
+			c.TcpServer.Port = ServerConfigDefaults.Port
+		} else if c.TcpServer.Port < 1024 || c.TcpServer.Port > 65535 {
+			return errors.New("invalid tcp server port")
+		}
+	}
+
+	if c.Db == nil {
+		return errors.New("Db is required")
+	} else {
+		if c.Db.EngineType == "" {
+			c.Db.EngineType = DbConfigDefaults.EngineType
+		} else if !slices.Contains(ValidEngineTypes, c.Db.EngineType) {
+			return errors.New("invalid Db engine type")
+		}
+	}
+
+	return nil
+}
+
+func NewConfig(configPath string) (*Config, error) {
+	// load from file
 	file, err := os.ReadFile(configPath)
 
 	if err != nil {
@@ -68,58 +121,23 @@ func (c *Config) ParseYaml(configPath string) (*Config, error) {
 		return nil, errors.New("failed to read buffer: " + err.Error())
 	}
 
-	var config Config
-	if err = yaml.Unmarshal(data, &config); err != nil {
+	cfg := &Config{
+		App:       &AppConfigOptions{},
+		TcpServer: &ServerConfigOptions{},
+		Db:        &DbConfigOptions{},
+	}
+
+	// parse
+	cfg, err = cfg.parseYaml(data, cfg)
+
+	if err != nil {
 		return nil, errors.New("failed to parse config file: " + err.Error())
 	}
 
-	if err = config.ValidateConfig(); err != nil {
+	// validate
+	if err = cfg.validateConfig(); err != nil {
 		return nil, errors.New("failed to validate config file: " + err.Error())
 	}
 
-	return &config, nil
-}
-
-func (c *Config) ValidateConfig() error {
-	if c.app == nil {
-		return errors.New("app is required")
-	} else {
-		if c.app.LogLevel == "" {
-			c.app.LogLevel = AppConfigDefaults.LogLevel
-		} else if !slices.Contains(ValidLogLevels, c.app.LogLevel) {
-			return errors.New("invalid log level")
-		}
-
-		if c.app.LogOutput == "" {
-			c.app.LogOutput = AppConfigDefaults.LogOutput
-		} else if !slices.Contains(ValidLogOutputs, c.app.LogOutput) {
-			return errors.New("invalid log output")
-		}
-	}
-
-	if c.tcpServer == nil {
-		return errors.New("tcp_server is required")
-	} else {
-		if c.tcpServer.Host == "" {
-			c.tcpServer.Host = ServerConfigDefaults.Host
-		}
-
-		if c.tcpServer.Port == 0 {
-			c.tcpServer.Port = ServerConfigDefaults.Port
-		} else if c.tcpServer.Port < 1024 || c.tcpServer.Port > 65535 {
-			return errors.New("invalid tcp server port")
-		}
-	}
-
-	if c.db == nil {
-		return errors.New("db is required")
-	} else {
-		if c.db.EngineType == "" {
-			c.db.EngineType = DbConfigDefaults.EngineType
-		} else if !slices.Contains(ValidEngineTypes, c.db.EngineType) {
-			return errors.New("invalid db engine type")
-		}
-	}
-
-	return nil
+	return cfg, nil
 }

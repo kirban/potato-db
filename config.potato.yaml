@@ -1,0 +1,8 @@
+app:
+  level: info
+  output: stdout
+tcp_server:
+  host: localhost
+  port: 8282
+db:
+  engine_type: in-memory

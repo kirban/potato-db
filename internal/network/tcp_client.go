@@ -16,17 +16,21 @@ type TCPClient struct {
 	bufferSize  int
 }
 
-func NewTCPClient(address string, idleTimeout time.Duration) (*TCPClient, error) {
+func NewTCPClient(address string, idleTimeout time.Duration, bufferSize int) (*TCPClient, error) {
 	conn, err := net.Dial("tcp", address)
 
 	if err != nil {
-		return nil, errors.New("failed to connect: " + err.Error())
+		return nil, err
+	}
+
+	if bufferSize == 0 {
+		bufferSize = defaultBufferSize
 	}
 
 	client := &TCPClient{
 		conn:        conn,
 		idleTimeout: idleTimeout,
-		bufferSize:  defaultBufferSize,
+		bufferSize:  bufferSize,
 	}
 
 	if client.idleTimeout != 0 {

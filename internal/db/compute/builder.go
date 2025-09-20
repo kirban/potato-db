@@ -1,16 +1,21 @@
 package compute
 
+import "go.uber.org/zap"
+
 type DatabaseComputeBuilder interface {
 	InitParser(parser Parser) DatabaseComputeBuilder
 	Build() *Compute
 }
 
 type dbComputeBuilder struct {
+	logger *zap.Logger
 	parser *Parser
 }
 
-func NewDatabaseComputeBuilder() DatabaseComputeBuilder {
-	return &dbComputeBuilder{}
+func NewDatabaseComputeBuilder(logger *zap.Logger) DatabaseComputeBuilder {
+	return &dbComputeBuilder{
+		logger: logger,
+	}
 }
 
 func (cb *dbComputeBuilder) InitParser(parser Parser) DatabaseComputeBuilder {

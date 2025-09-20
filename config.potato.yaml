@@ -1,5 +1,5 @@
 app:
-  level: info
+  level: debug
   output: stdout
 tcp_server:
   host: localhost

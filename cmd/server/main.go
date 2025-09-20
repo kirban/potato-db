@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
-	"github.com/kirban/potato-db/internal/config"
-	"github.com/kirban/potato-db/internal/network"
-	"go.uber.org/zap"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/kirban/potato-db/internal/config"
+	loggerModule "github.com/kirban/potato-db/internal/logger"
+	"github.com/kirban/potato-db/internal/network"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -21,10 +23,27 @@ func main() {
 	cfg, err := config.NewConfig(configPath)
 
 	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	logger, err := loggerModule.NewLogger(cfg)
+
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	logger, err := zap.NewDevelopment() // todo вынести инициализацию логера
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			// ожидаемые ошибки stdout/stderr на macOS можно игнорировать
+			log.Printf("logger sync error: %v", err)
+		}
+	}()
+
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Panic("uncaught panic", zap.Any("recovery", r))
+		}
+	}()
 
 	server, err := network.NewTCPServer(logger, cfg.TcpServer)
 
@@ -36,8 +55,7 @@ func main() {
 	defer stop()
 
 	go func() {
-		err := server.StartAndServe()
-		if err != nil {
+		if err := server.StartAndServe(ctx); err != nil {
 			logger.Fatal("failed starting server", zap.Error(err))
 		}
 	}()

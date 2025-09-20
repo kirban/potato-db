@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"go.uber.org/zap"
 )
 
 var (
@@ -16,6 +17,7 @@ type Engine interface {
 
 type Storage struct {
 	engine *Engine
+	logger *zap.Logger
 }
 
 func (s *Storage) Get(key string) (string, error) {
@@ -48,12 +50,13 @@ func (s *Storage) Del(key string) error {
 	return nil
 }
 
-func NewStorage(engine *Engine) (*Storage, error) {
+func NewStorage(engine *Engine, logger *zap.Logger) (*Storage, error) {
 	if engine == nil {
 		return nil, errors.New("engine is required")
 	}
 
 	return &Storage{
 		engine: engine,
+		logger: logger,
 	}, nil
 }

@@ -5,11 +5,9 @@ import (
 	"github.com/kirban/potato-db/internal/db/storage"
 	inmemory "github.com/kirban/potato-db/internal/db/storage/engines/in-memory"
 	"go.uber.org/zap"
-	"log"
 )
 
 type DatabaseBuilder interface {
-	InitLogger() DatabaseBuilder
 	InitStorage() DatabaseBuilder
 	InitCompute() DatabaseBuilder
 	Build() *Database
@@ -21,33 +19,17 @@ type dbBuilder struct {
 	compute *compute.Compute
 }
 
-func NewDbBuilder() DatabaseBuilder {
-	return &dbBuilder{}
-}
-
-func (d *dbBuilder) InitLogger() DatabaseBuilder {
-	logger, err := zap.NewDevelopment()
-
-	if err != nil {
-		log.Fatalf("can't initialize zap logger: %v", err)
+func NewDbBuilder(logger *zap.Logger) DatabaseBuilder {
+	return &dbBuilder{
+		logger: logger,
 	}
-
-	defer func(logger *zap.Logger) {
-		err := logger.Sync()
-		if err != nil {
-			log.Fatalf("can't sync zap logger: %v", err)
-		}
-	}(logger)
-
-	d.logger = logger
-	return d
 }
 
 func (d *dbBuilder) InitStorage() DatabaseBuilder {
 	engine, _ := inmemory.NewInMemoryEngine()
 
 	d.storage = storage.
-		NewDatabaseStorageBuilder().
+		NewDatabaseStorageBuilder(d.logger).
 		InitEngine(engine).
 		Build()
 
@@ -55,10 +37,10 @@ func (d *dbBuilder) InitStorage() DatabaseBuilder {
 }
 
 func (d *dbBuilder) InitCompute() DatabaseBuilder {
-	var defaultParser = compute.NewQueryParser()
+	var defaultParser = compute.NewQueryParser(d.logger)
 
 	d.compute = compute.
-		NewDatabaseComputeBuilder().
+		NewDatabaseComputeBuilder(d.logger).
 		InitParser(defaultParser).
 		Build()
 

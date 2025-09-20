@@ -25,6 +25,10 @@ func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions) (*TCPS
 		return nil, errors.New("logger is invalid")
 	}
 
+	if config == nil {
+		return nil, errors.New("config is invalid")
+	}
+
 	return &TCPServer{
 		host:     config.Host,
 		port:     config.Port,

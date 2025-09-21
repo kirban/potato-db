@@ -2,6 +2,7 @@ package inmemory
 
 import (
 	"errors"
+	"go.uber.org/zap"
 )
 
 var (
@@ -10,6 +11,7 @@ var (
 
 type InMemEngine struct {
 	dataStorage *HashTable
+	logger      *zap.Logger
 }
 
 func (e *InMemEngine) Get(key string) (string, bool) {
@@ -28,8 +30,13 @@ func (e *InMemEngine) Delete(key string) error {
 	return nil
 }
 
-func NewInMemoryEngine() (*InMemEngine, error) {
+func NewInMemoryEngine(logger *zap.Logger) (*InMemEngine, error) {
+	if logger == nil {
+		return nil, ErrInvalidLogger
+	}
+
 	return &InMemEngine{
 		dataStorage: NewHashTable(),
+		logger:      logger,
 	}, nil
 }

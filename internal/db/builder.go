@@ -26,7 +26,7 @@ func NewDbBuilder(logger *zap.Logger) DatabaseBuilder {
 }
 
 func (d *dbBuilder) InitStorage() DatabaseBuilder {
-	engine, _ := inmemory.NewInMemoryEngine()
+	engine, _ := inmemory.NewInMemoryEngine(d.logger)
 
 	d.storage = storage.
 		NewDatabaseStorageBuilder(d.logger).

@@ -36,13 +36,15 @@ type DbConfigOptions struct {
 }
 
 type ServerConfigOptions struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
+	Host       string `yaml:"host"`
+	Port       int    `yaml:"port"`
+	BufferSize int    `yaml:"buffer_size"`
 }
 
 var ServerConfigDefaults = &ServerConfigOptions{
-	Host: "127.0.0.1",
-	Port: 8282,
+	Host:       "127.0.0.1",
+	Port:       8282,
+	BufferSize: 4 << 10,
 }
 
 var DbConfigDefaults = &DbConfigOptions{
@@ -90,6 +92,10 @@ func (c *Config) validateConfig() error {
 			c.TcpServer.Port = ServerConfigDefaults.Port
 		} else if c.TcpServer.Port < 1024 || c.TcpServer.Port > 65535 {
 			return errors.New("invalid tcp server port")
+		}
+
+		if c.TcpServer.BufferSize == 0 {
+			c.TcpServer.BufferSize = ServerConfigDefaults.BufferSize
 		}
 	}
 

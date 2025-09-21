@@ -15,7 +15,7 @@ var (
 )
 
 type Executable interface {
-	ExecuteQuery(q string) (any, error)
+	ExecuteQuery(q string) (string, error)
 }
 
 type computeModule interface {
@@ -54,31 +54,31 @@ func NewDatabase(computeModule computeModule, storageModule storageModule, logge
 	}, nil
 }
 
-func (db *Database) ExecuteQuery(q string) string {
+func (db *Database) ExecuteQuery(q string) (string, error) {
 	query, err := db.computeModule.Compute(q)
 
 	if err != nil {
-		return fmt.Sprintf("%s %s", compute.QueryErrorResult, err.Error())
+		return fmt.Sprintf("%s %s", compute.QueryErrorResult, err.Error()), nil
 	}
 
 	switch query.CommandType {
 	case compute.GetCommand:
 		value, err := db.storageModule.Get(query.Arguments[0])
 		if err != nil {
-			return fmt.Sprintf("%s %s", compute.QueryErrorResult, err.Error())
+			return fmt.Sprintf("%s %s", compute.QueryErrorResult, err.Error()), nil
 		}
-		return fmt.Sprintf("%s %s", compute.QueryOkResult, value)
+		return fmt.Sprintf("%s %s", compute.QueryOkResult, value), nil
 	case compute.SetCommand:
 		if err := db.storageModule.Set(query.Arguments[0], query.Arguments[1]); err != nil {
-			return fmt.Sprintf("%s %s", compute.QueryErrorResult, err.Error())
+			return fmt.Sprintf("%s %s", compute.QueryErrorResult, err.Error()), nil
 		}
-		return fmt.Sprint(compute.QueryOkResult)
+		return fmt.Sprint(compute.QueryOkResult), nil
 	case compute.DelCommand:
 		if err := db.storageModule.Del(query.Arguments[0]); err != nil {
-			return fmt.Sprint(compute.QueryErrorResult, err.Error())
+			return fmt.Sprint(compute.QueryErrorResult, err.Error()), nil
 		}
-		return fmt.Sprint(compute.QueryOkResult)
+		return fmt.Sprint(compute.QueryOkResult), nil
 	}
 
-	return fmt.Sprintf("%s", compute.QueryErrorResult)
+	return fmt.Sprintf("%s", compute.QueryErrorResult), nil
 }

@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/kirban/potato-db/internal/config"
+	"github.com/kirban/potato-db/internal/db"
 	loggerModule "github.com/kirban/potato-db/internal/logger"
 	"github.com/kirban/potato-db/internal/network"
 	"go.uber.org/zap"
@@ -45,7 +46,12 @@ func main() {
 		}
 	}()
 
-	server, err := network.NewTCPServer(logger, cfg.TcpServer)
+	database := db.NewDbBuilder(logger).
+		InitStorage().
+		InitCompute().
+		Build()
+
+	server, err := network.NewTCPServer(logger, cfg.TcpServer, database)
 
 	if err != nil {
 		logger.Fatal("failed to create server", zap.Error(err))

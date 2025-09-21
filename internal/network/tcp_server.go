@@ -5,22 +5,27 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-
 	"github.com/kirban/potato-db/internal/config"
-	"github.com/kirban/potato-db/internal/network/handlers"
+	"github.com/kirban/potato-db/internal/db"
 	"go.uber.org/zap"
+	"net"
+	"time"
 )
 
+type TCPRouteHandler func(string) string
+
 type TCPServer struct {
-	host     string
-	port     int
-	logger   *zap.Logger
-	listener net.Listener
-	handler  func(string) string
+	host           string
+	port           int
+	logger         *zap.Logger
+	listener       net.Listener
+	database       db.Executable
+	bufferSize     int
+	idleTimeout    time.Duration
+	maxConnections int
 }
 
-func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions) (*TCPServer, error) {
+func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions, database db.Executable) (*TCPServer, error) {
 	if logger == nil {
 		return nil, errors.New("logger is invalid")
 	}
@@ -29,12 +34,16 @@ func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions) (*TCPS
 		return nil, errors.New("config is invalid")
 	}
 
+	if database == nil {
+		return nil, errors.New("database is invalid")
+	}
+
 	return &TCPServer{
-		host:     config.Host,
-		port:     config.Port,
-		logger:   logger,
-		listener: nil,
-		handler:  handlers.HandleQuery,
+		host:       config.Host,
+		port:       config.Port,
+		logger:     logger,
+		database:   database,
+		bufferSize: config.BufferSize,
 	}, nil
 }
 
@@ -86,7 +95,7 @@ func (s *TCPServer) Stop() {
 }
 
 func (s *TCPServer) handleConnection(conn net.Conn) {
-	s.logger.Info("client connected")
+	s.logger.Info("client connected", zap.String("remote", conn.RemoteAddr().String()))
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -101,16 +110,24 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 		}
 	}(conn)
 
-	data, err := bufio.NewReader(conn).ReadString('\n')
-	if err != nil {
-		s.logger.Error("failed to read request data", zap.Error(err))
-		return
-	}
+	request := make([]byte, 0, s.bufferSize)
+	scanner := bufio.NewScanner(conn)
+	scanner.Buffer(request, s.bufferSize)
 
-	request := data[:len(data)-1]
-	response := s.handler(request)
-	if _, err := conn.Write([]byte(response + "\n")); err != nil {
-		s.logger.Error("failed to write response", zap.Error(err))
-		return
+	for scanner.Scan() {
+		line := scanner.Text()
+		s.logger.Info("received", zap.String("msg", line))
+
+		response, err := s.database.ExecuteQuery(line)
+		if err != nil {
+			s.logger.Error("database query failed", zap.Error(err))
+			response = "ERROR database query failed"
+		}
+
+		responseStr := fmt.Sprintf("%v", response)
+		if _, err := conn.Write([]byte(responseStr + "\n")); err != nil {
+			s.logger.Error("failed to write response", zap.Error(err))
+			return
+		}
 	}
 }

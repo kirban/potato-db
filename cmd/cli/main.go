@@ -2,12 +2,20 @@ package main
 
 import (
 	"bufio"
+	"errors"
+	"flag"
 	"fmt"
-	"github.com/kirban/potato-db/internal/config"
-	"github.com/kirban/potato-db/internal/db"
-	loggerModule "github.com/kirban/potato-db/internal/logger"
+	"github.com/kirban/potato-db/internal/helpers"
 	"log"
+	"net"
 	"os"
+	"syscall"
+	"time"
+
+	"github.com/kirban/potato-db/internal/config"
+	loggerModule "github.com/kirban/potato-db/internal/logger"
+	"github.com/kirban/potato-db/internal/network"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -36,10 +44,23 @@ func main() {
 		}
 	}()
 
-	database := db.NewDbBuilder(logger).
-		InitStorage().
-		InitCompute().
-		Build()
+	host := flag.String("host", "localhost", "host to connect to")
+	port := flag.String("port", "8282", "port to connect to")
+	idleTimeout := flag.Duration("idle-timeout", time.Minute, "idle timeout")
+	maxMessageSize := flag.String("max-message-size", "4KB", "max message size")
+	flag.Parse()
+
+	maxSize, err := helpers.ParseSize(*maxMessageSize)
+	if err != nil {
+		logger.Fatal("failed to parse max message size", zap.Error(err))
+	}
+
+	addr := net.JoinHostPort(*host, *port)
+	client, err := network.NewTCPClient(addr, *idleTimeout, maxSize)
+
+	if err != nil {
+		logger.Fatal("failed to create tcp client", zap.Error(err))
+	}
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -47,10 +68,22 @@ func main() {
 
 	for {
 		fmt.Printf("> ")
-		query, _ := reader.ReadString('\n')
+		query, err := reader.ReadString('\n')
 
-		result := database.ExecuteQuery(query)
+		if errors.Is(err, syscall.EPIPE) {
+			logger.Fatal("connection was closed", zap.Error(err))
+		} else if err != nil {
+			logger.Error("failed to read query", zap.Error(err))
+		}
 
-		fmt.Println(result)
+		result, err := client.Send([]byte(query))
+
+		if errors.Is(err, syscall.EPIPE) {
+			logger.Fatal("connection was closed", zap.Error(err))
+		} else if err != nil {
+			logger.Error("failed to send query", zap.Error(err))
+		}
+
+		fmt.Println(string(result))
 	}
 }

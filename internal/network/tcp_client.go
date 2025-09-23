@@ -11,7 +11,7 @@ import (
 var defaultBufferSize = 4 << 10
 
 type TCPClient struct {
-	conn        net.Conn
+	connection  net.Conn
 	idleTimeout time.Duration
 	bufferSize  int
 }
@@ -28,12 +28,12 @@ func NewTCPClient(address string, idleTimeout time.Duration, bufferSize int) (*T
 	}
 
 	client := &TCPClient{
-		conn:        conn,
+		connection:  conn,
 		idleTimeout: idleTimeout,
 		bufferSize:  bufferSize,
 	}
 
-	if client.idleTimeout != 0 {
+	if idleTimeout != 0 {
 		if err := conn.SetDeadline(time.Now().Add(client.idleTimeout)); err != nil {
 			return nil, fmt.Errorf("failed to set deadline for connection: %w", err)
 		}
@@ -43,16 +43,19 @@ func NewTCPClient(address string, idleTimeout time.Duration, bufferSize int) (*T
 }
 
 func (c *TCPClient) Send(request []byte) ([]byte, error) {
-	if _, err := c.conn.Write(request); err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+	if _, err := c.connection.Write(request); err != nil {
+		c.Close()
+		return nil, err
 	}
 
 	response := make([]byte, c.bufferSize)
-	count, err := c.conn.Read(response)
+	count, err := c.connection.Read(response)
 
 	if err != nil && err != io.EOF {
+		c.Close()
 		return nil, err
 	} else if count == c.bufferSize {
+		c.Close()
 		return nil, errors.New("small buffer size")
 	}
 
@@ -60,7 +63,7 @@ func (c *TCPClient) Send(request []byte) ([]byte, error) {
 }
 
 func (c *TCPClient) Close() {
-	if c.conn != nil {
-		_ = c.conn.Close()
+	if c.connection != nil {
+		_ = c.connection.Close()
 	}
 }

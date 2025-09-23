@@ -4,5 +4,7 @@ app:
 tcp_server:
   host: localhost
   port: 8282
+  buffer_size: 4096
+  max_connections: 100
 db:
   engine_type: in-memory

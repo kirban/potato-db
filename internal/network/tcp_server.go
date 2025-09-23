@@ -9,6 +9,7 @@ import (
 	"github.com/kirban/potato-db/internal/db"
 	"go.uber.org/zap"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,7 @@ type TCPServer struct {
 	bufferSize     int
 	idleTimeout    time.Duration
 	maxConnections int
+	semaphore      chan struct{}
 }
 
 func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions, database db.Executable) (*TCPServer, error) {
@@ -39,11 +41,13 @@ func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions, databa
 	}
 
 	return &TCPServer{
-		host:       config.Host,
-		port:       config.Port,
-		logger:     logger,
-		database:   database,
-		bufferSize: config.BufferSize,
+		host:           config.Host,
+		port:           config.Port,
+		logger:         logger,
+		database:       database,
+		bufferSize:     config.BufferSize,
+		maxConnections: config.MaxConnections,
+		semaphore:      make(chan struct{}, config.MaxConnections),
 	}, nil
 }
 
@@ -65,26 +69,39 @@ func (s *TCPServer) StartAndServe(ctx context.Context) error {
 
 	s.logger.Info(fmt.Sprintf("TCP-server started at %s:%d", s.host, s.port))
 
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
 	go func() {
-		<-ctx.Done()
-		s.logger.Info("stopping tcp server (ctx done)")
-		_ = s.listener.Close()
+		defer wg.Done()
+		for {
+			conn, err := s.listener.Accept()
+			if err != nil {
+				// net.ErrClosed when listener closed on shutdown
+				if errors.Is(err, net.ErrClosed) {
+					s.logger.Info("listener closed")
+					return
+				}
+				s.logger.Error("accept error", zap.Error(err))
+				continue
+			}
+
+			select {
+			case s.semaphore <- struct{}{}:
+				go s.handleConnection(conn)
+			default:
+				s.logger.Warn("too many connections", zap.String("remote", conn.RemoteAddr().String()))
+				_ = conn.Close()
+			}
+
+		}
 	}()
 
-	for {
-		conn, err := s.listener.Accept()
-		if err != nil {
-			// net.ErrClosed when listener closed on shutdown
-			if errors.Is(err, net.ErrClosed) {
-				s.logger.Info("listener closed")
-				return nil
-			}
-			s.logger.Error("accept error", zap.Error(err))
-			continue
-		}
+	<-ctx.Done()
+	s.Stop()
+	wg.Wait()
 
-		go s.handleConnection(conn)
-	}
+	return nil
 }
 
 func (s *TCPServer) Stop() {
@@ -108,6 +125,7 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 		if err != nil {
 			s.logger.Error("failed to close connection", zap.Error(err))
 		}
+		<-s.semaphore
 	}(conn)
 
 	request := make([]byte, 0, s.bufferSize)
@@ -116,7 +134,7 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		s.logger.Info("received", zap.String("msg", line))
+		s.logger.Info("received", zap.String("msg", line), zap.String("remote", conn.RemoteAddr().String()))
 
 		response, err := s.database.ExecuteQuery(line)
 		if err != nil {

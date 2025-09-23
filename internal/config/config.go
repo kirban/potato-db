@@ -36,15 +36,17 @@ type DbConfigOptions struct {
 }
 
 type ServerConfigOptions struct {
-	Host       string `yaml:"host"`
-	Port       int    `yaml:"port"`
-	BufferSize int    `yaml:"buffer_size"`
+	Host           string `yaml:"host"`
+	Port           int    `yaml:"port"`
+	BufferSize     int    `yaml:"buffer_size"`
+	MaxConnections int    `yaml:"max_connections"`
 }
 
 var ServerConfigDefaults = &ServerConfigOptions{
-	Host:       "127.0.0.1",
-	Port:       8282,
-	BufferSize: 4 << 10,
+	Host:           "127.0.0.1",
+	Port:           8282,
+	BufferSize:     4 << 10,
+	MaxConnections: 100,
 }
 
 var DbConfigDefaults = &DbConfigOptions{
@@ -96,6 +98,10 @@ func (c *Config) validateConfig() error {
 
 		if c.TcpServer.BufferSize == 0 {
 			c.TcpServer.BufferSize = ServerConfigDefaults.BufferSize
+		}
+
+		if c.TcpServer.MaxConnections == 0 {
+			c.TcpServer.MaxConnections = ServerConfigDefaults.MaxConnections
 		}
 	}
 

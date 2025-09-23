@@ -80,8 +80,10 @@ func main() {
 
 		if errors.Is(err, syscall.EPIPE) {
 			logger.Fatal("connection was closed", zap.Error(err))
+			return
 		} else if err != nil {
 			logger.Error("failed to send query", zap.Error(err))
+			return
 		}
 
 		fmt.Println(string(result))

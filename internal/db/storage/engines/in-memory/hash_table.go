@@ -10,7 +10,7 @@ type Hasheable interface {
 
 type HashTable struct {
 	data map[string]string
-	mu   *sync.Mutex // todo bench for mutex or rwmutex
+	mu   sync.Mutex // todo bench for mutex or rwmutex
 }
 
 func (h *HashTable) Get(k string) (string, bool) {
@@ -36,6 +36,6 @@ func (h *HashTable) Del(k string) {
 func NewHashTable() *HashTable {
 	return &HashTable{
 		data: make(map[string]string),
-		mu:   &sync.Mutex{},
+		mu:   sync.Mutex{},
 	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/kirban/potato-db/internal/network/handlers"
 	"log"
 	"os"
 	"os/signal"
@@ -51,7 +52,11 @@ func main() {
 		InitCompute().
 		Build()
 
-	server, err := network.NewTCPServer(logger, cfg.TcpServer, database)
+	handler := &handlers.DatabaseHandler{
+		Db: database,
+	}
+
+	server, err := network.NewTCPServer(logger, cfg.TcpServer, handler)
 
 	if err != nil {
 		logger.Fatal("failed to create server", zap.Error(err))

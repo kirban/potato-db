@@ -6,28 +6,29 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kirban/potato-db/internal/config"
-	"github.com/kirban/potato-db/internal/db"
 	"go.uber.org/zap"
 	"net"
 	"sync"
 	"time"
 )
 
-type TCPRouteHandler func(string) string
+type TCPRequestHandler interface {
+	HandleRequest(string) (string, error)
+}
 
 type TCPServer struct {
 	host           string
 	port           int
 	logger         *zap.Logger
 	listener       net.Listener
-	database       db.Executable
+	handler        TCPRequestHandler
 	bufferSize     int
 	idleTimeout    time.Duration
 	maxConnections int
 	semaphore      chan struct{}
 }
 
-func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions, database db.Executable) (*TCPServer, error) {
+func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions, handler TCPRequestHandler) (*TCPServer, error) {
 	if logger == nil {
 		return nil, errors.New("logger is invalid")
 	}
@@ -36,15 +37,15 @@ func NewTCPServer(logger *zap.Logger, config *config.ServerConfigOptions, databa
 		return nil, errors.New("config is invalid")
 	}
 
-	if database == nil {
-		return nil, errors.New("database is invalid")
+	if handler == nil {
+		return nil, errors.New("handler is invalid")
 	}
 
 	return &TCPServer{
 		host:           config.Host,
 		port:           config.Port,
 		logger:         logger,
-		database:       database,
+		handler:        handler,
 		bufferSize:     config.BufferSize,
 		maxConnections: config.MaxConnections,
 		semaphore:      make(chan struct{}, config.MaxConnections),
@@ -136,7 +137,8 @@ func (s *TCPServer) handleConnection(conn net.Conn) {
 		line := scanner.Text()
 		s.logger.Info("received", zap.String("msg", line), zap.String("remote", conn.RemoteAddr().String()))
 
-		response, err := s.database.ExecuteQuery(line)
+		response, err := s.handler.HandleRequest(line)
+
 		if err != nil {
 			s.logger.Error("database query failed", zap.Error(err))
 			response = "ERROR database query failed"

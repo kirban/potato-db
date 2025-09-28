@@ -19,14 +19,14 @@ import (
 
 const DefaultConfigPath = "config.potato.yaml"
 
-type CliApp struct {
+type AppCli struct {
 	client *network.TCPClient
 	logger *zap.Logger
 	config *config.Config
 }
 
-func NewCliApp() (*CliApp, error) {
-	app := &CliApp{}
+func NewAppCli() (*AppCli, error) {
+	app := &AppCli{}
 
 	err := app.initDeps()
 
@@ -37,7 +37,7 @@ func NewCliApp() (*CliApp, error) {
 	return app, nil
 }
 
-func (app *CliApp) Run() error {
+func (app *AppCli) Run() error {
 	defer func() {
 		if err := app.logger.Sync(); err != nil {
 			// ожидаемые ошибки stdout/stderr на macOS можно игнорировать
@@ -73,7 +73,7 @@ func (app *CliApp) Run() error {
 	}
 }
 
-func (app *CliApp) initDeps() error {
+func (app *AppCli) initDeps() error {
 	deps := []func() error{
 		app.initConfig,
 		app.initLogger,
@@ -89,7 +89,7 @@ func (app *CliApp) initDeps() error {
 	return nil
 }
 
-func (app *CliApp) initConfig() error {
+func (app *AppCli) initConfig() error {
 	configPath := os.Getenv("CONFIG_PATH")
 
 	if configPath == "" {
@@ -106,7 +106,7 @@ func (app *CliApp) initConfig() error {
 	return nil
 }
 
-func (app *CliApp) initLogger() error {
+func (app *AppCli) initLogger() error {
 	logger, err := loggerModule.NewLogger(app.config)
 
 	if err != nil {
@@ -117,7 +117,7 @@ func (app *CliApp) initLogger() error {
 	return nil
 }
 
-func (app *CliApp) initClient() error {
+func (app *AppCli) initClient() error {
 	host := flag.String("host", "localhost", "host to connect to")
 	port := flag.String("port", "8282", "port to connect to")
 	idleTimeout := flag.Duration("idle-timeout", time.Minute, "idle timeout")

@@ -2,6 +2,7 @@ package compute
 
 import (
 	"errors"
+	"go.uber.org/zap"
 	"strings"
 )
 
@@ -15,7 +16,9 @@ type Parser interface {
 	Parse(data string) (*Query, error)
 }
 
-type QueryParser struct{}
+type QueryParser struct {
+	logger *zap.Logger
+}
 
 func (q *QueryParser) Parse(data string) (*Query, error) {
 	trimmed := strings.TrimSpace(data)
@@ -68,6 +71,8 @@ func parseArguments(q string) ([]string, error) {
 	return rawArgs, nil
 }
 
-func NewQueryParser() *QueryParser {
-	return &QueryParser{}
+func NewQueryParser(logger *zap.Logger) *QueryParser {
+	return &QueryParser{
+		logger: logger,
+	}
 }

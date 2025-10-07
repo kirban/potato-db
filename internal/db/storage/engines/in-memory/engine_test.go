@@ -2,6 +2,7 @@ package inmemory
 
 import (
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"testing"
 )
 
@@ -21,7 +22,7 @@ func TestNewInMemoryEngine(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			engine, err := NewInMemoryEngine()
+			engine, err := NewInMemoryEngine(zap.NewNop())
 			assert.Equal(t, tc.expectedErr, err)
 
 			if tc.expectedNilObj {

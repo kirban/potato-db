@@ -1,5 +1,7 @@
 package storage
 
+import "go.uber.org/zap"
+
 type DatabaseStorageBuilder interface {
 	InitEngine(engine Engine) DatabaseStorageBuilder
 	Build() *Storage
@@ -7,10 +9,13 @@ type DatabaseStorageBuilder interface {
 
 type dbStorageBuilder struct {
 	engine *Engine
+	logger *zap.Logger
 }
 
-func NewDatabaseStorageBuilder() DatabaseStorageBuilder {
-	return &dbStorageBuilder{}
+func NewDatabaseStorageBuilder(logger *zap.Logger) DatabaseStorageBuilder {
+	return &dbStorageBuilder{
+		logger: logger,
+	}
 }
 
 func (sb *dbStorageBuilder) InitEngine(engine Engine) DatabaseStorageBuilder {
@@ -19,6 +24,6 @@ func (sb *dbStorageBuilder) InitEngine(engine Engine) DatabaseStorageBuilder {
 }
 
 func (sb *dbStorageBuilder) Build() *Storage {
-	s, _ := NewStorage(sb.engine)
+	s, _ := NewStorage(sb.engine, sb.logger)
 	return s
 }

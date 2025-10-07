@@ -1,29 +1,18 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"github.com/kirban/potato-db/internal/db"
-	"os"
+	"github.com/kirban/potato-db/internal/app/cli"
+	"log"
 )
 
 func main() {
-	database := db.NewDbBuilder().
-		InitLogger().
-		InitStorage().
-		InitCompute().
-		Build()
+	app, err := cli.NewAppCli()
 
-	reader := bufio.NewReader(os.Stdin)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	fmt.Printf("Enter command and then press enter\n")
-
-	for {
-		fmt.Printf("> ")
-		query, _ := reader.ReadString('\n')
-
-		result := database.ExecuteQuery(query)
-
-		fmt.Println(result)
+	if err := app.Run(); err != nil {
+		log.Fatal(err)
 	}
 }
